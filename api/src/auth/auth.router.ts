@@ -15,7 +15,7 @@ export const authRouter = Router();
 authRouter.post('/register', validate(RegisterSchema), async (req, res) => {
   const { email, password } = req.body as Credentials;
   const user = await users.insert({ email, password: await hashPassword(password) });
-  res.status(201).json(user);
+  res.status(201).json({ id: user.id, email: user.email, createdAt: user.createdAt });
 });
 
 // POST /api/auth/login { email, password } → 200 { accessToken, tokenType: 'Bearer', expiresIn }
