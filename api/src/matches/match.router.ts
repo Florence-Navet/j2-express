@@ -7,6 +7,7 @@ import { teams } from '../teams/team.repository.js';
 import { matches } from './match.repository.js';
 import { MatchQuerySchema, MatchSchema, SeedQuerySchema, type MatchInput, type MatchQuery, type SeedQuery } from './match.schema.js';
 import { simulate } from './simulator.js';
+import {requireAuth} from "../middlewares/requireAuth.js";
 
 export const matchRouter = Router();
 
@@ -24,13 +25,13 @@ matchRouter.get('/:id', async (req, res) => {
 });
 
 // POST /api/matches { teamAId, teamBId } : programmé, pas encore joué
-matchRouter.post('/', validate(MatchSchema), async (req, res) => {
+matchRouter.post('/', requireAuth, validate(MatchSchema), async (req, res) => {
   const { id } = await matches.insert(req.body as MatchInput);
   res.status(201).location(`/api/matches/${id}`).json(await matches.findView(id));
 });
 
 // POST /api/matches/:id/play[?seed=42] : on joue le match et on enregistre le résultat
-matchRouter.post('/:id/play', validateQuery(SeedQuerySchema), async (req, res) => {
+matchRouter.post('/:id/play', requireAuth, validateQuery(SeedQuerySchema), async (req, res) => {
   const id = parseId(req.params.id, 'Match');
   const { seed } = res.locals.query as SeedQuery;
   const match = await matches.findView(id);
@@ -48,7 +49,7 @@ matchRouter.post('/:id/play', validateQuery(SeedQuerySchema), async (req, res) =
 });
 
 // DELETE /api/matches/:id
-matchRouter.delete('/:id', async (req, res) => {
+matchRouter.delete('/:id', requireAuth, async (req, res) => {
   const deleted = await matches.delete(parseId(req.params.id, 'Match'));
   if (!deleted) throw new HttpError(404, 'Match not found');
   res.sendStatus(204);
