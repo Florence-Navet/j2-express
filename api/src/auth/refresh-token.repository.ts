@@ -19,4 +19,13 @@ export const refreshTokens = {
     );
     return row?.userId ?? null;
   },
+
+  /** Révoque le jeton (logout) : renvoie true si une ligne a été supprimée, false si le hachage était inconnu ou expiré. */
+  async revoke(hash: string): Promise<boolean> {
+    const [row] = await query<{ userId: number }>(
+      `DELETE FROM refresh_token WHERE token_hash = $1 AND expires_at > now() RETURNING user_id AS "userId"`,
+      [hash],
+    );
+    return row !== undefined;
+  },
 };
