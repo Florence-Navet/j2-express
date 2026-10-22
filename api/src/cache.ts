@@ -34,8 +34,19 @@ export function connectRedis(): void {
  * (?country=IS&limit=3 et ?limit=3&country=IS sont la même réponse). Préfixe : « cache: ».
  */
 export function cacheKey(req: Request): string {
-  return `cache:${req.originalUrl}`;
+  const path = req.baseUrl + req.path;
+  const queryText = req.originalUrl.split('?')[1] ?? '';
+  const parametre = new URLSearchParams(queryText);
+  parametre.sort();
+  const query = parametre.toString();
+  if (query === ''){
+    return cache:${path};
+  }
+  return cache:${path}?${query};
 }
+
+
+
 
 /**
  * TODO 21 (TD Redis, étape 2) : le middleware de cache, à poser sur une route GET,
@@ -47,7 +58,20 @@ export function cacheKey(req: Request): string {
  * Si Redis échoue (get ou set) : next(), sans cache, sans erreur.
  */
 export function cached(_ttlSeconds: number): RequestHandler {
-  return (_req, _res, next) => next();
+
+  return (_req, _res, next) => {
+  const key = cacheKey(_req);
+   const hit = redis.get(key).catch(error => {
+     console.log(error);
+   });
+   if (hit) {
+     _res.set('X-cache', 'HIT').type('json').send(hit);
+     return;
+   }
+
+
+    next()
+  };
 }
 
 /**
