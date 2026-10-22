@@ -40,9 +40,9 @@ export function cacheKey(req: Request): string {
   parametre.sort();
   const query = parametre.toString();
   if (query === ''){
-    return cache:${path};
+    return `cache:${path}`;
   }
-  return cache:${path}?${query};
+  return `cache:${path}?${query}`;
 }
 
 
