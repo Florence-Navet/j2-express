@@ -6,7 +6,7 @@ import { validate, validateQuery } from '../middlewares/validate.js';
 import { players } from './player.repository.js';
 import { PlayerPatchSchema, PlayerSchema, PlayerSearchSchema, TopQuerySchema, type PlayerInput, type PlayerSearch, type TopQuery } from './player.schema.js';
 import {requireAuth} from "../middlewares/requireAuth.js";
-
+import { cached } from '../cache.js';
 export const playerRouter = Router();
 
 // GET /api/players?page=&limit=&country=&teamId=&q= : une page, le total dans un en-tête
@@ -16,8 +16,7 @@ playerRouter.get('/', validateQuery(PlayerSearchSchema), async (_req, res) => {
 });
 
 // GET /api/players/top?limit=3&country=IS — déclarée AVANT /:id, sinon « top » est pris pour un id
-// TODO 20 (TD Redis, étape 1) : un cache à la main, ici même, avant de le généraliser (étape 2).
-playerRouter.get('/top', validateQuery(TopQuerySchema), async (_req, res) => {
+playerRouter.get('/top', validateQuery(TopQuerySchema), cached(60), async (_req, res) => {
   res.json(await players.findTop(res.locals.query as TopQuery));
 });
 

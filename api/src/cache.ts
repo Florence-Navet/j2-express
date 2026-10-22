@@ -57,23 +57,42 @@ export function cacheKey(req: Request): string {
  * Pour intercepter la réponse : remplacer res.json par une fonction qui stocke puis appelle l'original.
  * Si Redis échoue (get ou set) : next(), sans cache, sans erreur.
  */
-export function cached(_ttlSeconds: number): RequestHandler {
+export function cached(ttlSeconds: number): RequestHandler {
+  return async (req, res, next) => {
+    const key = cacheKey(req);
+    let hit: string | null;
 
-  return (_req, _res, next) => {
-  const key = cacheKey(_req);
-   const hit = redis.get(key).catch(error => {
-     console.log(error);
-   });
-   if (hit) {
-     _res.set('X-cache', 'HIT').type('json').send(hit);
-     return;
-   }
+    try {
+      hit = await redis.get(key);
+    } catch {
+      next();
+      return;
+    }
 
+    if (hit !== null) {
+      res.set('X-Cache', 'HIT').type('json').send(hit);
+      return;
+    }
 
-    next()
+    res.set('X-Cache', 'MISS');
+    const originalJson = res.json.bind(res);
+    res.json = (body: unknown) => {
+      if (res.statusCode === 200) {
+        try {
+          const value = JSON.stringify(body);
+          if (value !== undefined) {
+            void redis.set(key, value, { EX: ttlSeconds }).catch(() => undefined);
+          }
+        } catch {
+          // Une erreur de cache ne doit pas empêcher l'envoi de la réponse.
+        }
+      }
+      return originalJson(body);
+    };
+
+    next();
   };
 }
-
 /**
  * TODO 22 (TD Redis, étape 3) : supprimer toutes les clés « cache:<prefix>* », par exemple
  * invalidate('/api/players') après une écriture sur un joueur. Avec SCAN (redis.scanIterator), pas KEYS :

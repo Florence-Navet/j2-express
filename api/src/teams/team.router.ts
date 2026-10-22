@@ -1,5 +1,6 @@
 // Les routes de Team. Hier : TeamController.
 import { Router } from 'express';
+import { cached } from '../cache.js';
 import { HttpError } from '../errors.js';
 import { SeedQuerySchema, type SeedQuery } from '../matches/match.schema.js';
 import { simulate } from '../matches/simulator.js';
@@ -12,7 +13,7 @@ import {requireAuth} from "../middlewares/requireAuth.js";
 export const teamRouter = Router();
 
 // GET /api/teams[?country=FR]
-teamRouter.get('/', validateQuery(TeamQuerySchema), async (_req, res) => {
+teamRouter.get('/', validateQuery(TeamQuerySchema), cached(30), async (_req, res) => {
   const { country } = res.locals.query as TeamQuery;
   res.json(await teams.findByCountry(country));
 });
@@ -25,7 +26,7 @@ teamRouter.get('/:id', async (req, res) => {
 });
 
 // GET /api/teams/:id/versus/:opponentId[?seed=42] : un match simulé, rien n'est enregistré
-teamRouter.get('/:id/versus/:opponentId', validateQuery(SeedQuerySchema), async (req, res) => {
+teamRouter.get('/:id/versus/:opponentId', validateQuery(SeedQuerySchema), cached(60), async (req, res) => {
   const id = parseId(req.params.id, 'Team');
   const opponentId = parseId(req.params.opponentId, 'Team');
   const { seed } = res.locals.query as SeedQuery;
